@@ -72,7 +72,23 @@ func (r *Response) Body() ([]byte, error) {
 		return nil, errors.New("response or body is nil")
 	}
 
-	b, err := ioutil.ReadAll(r.resp.Body)
+	var reader io.Reader
+	var err error
+	if r.Headers().Get("Content-Encoding") == "gzip" {
+		var gzipReader *gzip.Reader
+		gzipReader, err = gzip.NewReader(r.resp.Body)
+		if err != nil {
+			return nil, err
+		} else {
+			defer gzipReader.Close()
+			reader = gzipReader
+		}
+	} else {
+		reader = r.resp.Body
+	}
+
+	var b []byte
+	b, err = ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
